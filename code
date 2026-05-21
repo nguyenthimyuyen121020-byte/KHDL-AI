@@ -1,0 +1,52 @@
+code_web = """
+import streamlit as st
+import pandas as pd
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import train_test_split
+import plotly.express as px
+
+st.set_page_config(page_title="Hệ Thống Phát Hiện Gian Lận", layout="wide")
+st.title("🔍 Hệ Thống Phân Loại & Phát Hiện Gian Lận")
+
+uploaded_file = st.file_uploader("Tải tệp dữ liệu giao dịch (CSV)", type="csv")
+
+if uploaded_file is not None:
+    # Đọc dữ liệu
+    df = pd.read_csv(uploaded_file, nrows=100000)
+    st.write("### 1. Dữ liệu tổng quan", df.head())
+    
+    # Biểu đồ tỷ lệ
+    fraud_counts = df['isFraud'].value_counts()
+    fig = px.pie(values=fraud_counts.values, names=['Bình thường', 'Gian lận'], 
+                 title="Tỷ lệ giao dịch trong dữ liệu", hole=0.4)
+    st.plotly_chart(fig)
+
+    if st.button("Chạy mô hình phân loại chi tiết"):
+        features = ['step', 'amount', 'oldbalanceOrg', 'newbalanceOrig', 'oldbalanceDest', 'newbalanceDest']
+        X = df[features].fillna(0)
+        y = df['isFraud']
+        
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+        
+        model = RandomForestClassifier(n_estimators=20)
+        model.fit(X_train, y_train)
+        
+        # Dự đoán trên toàn bộ tệp vừa tải lên để xem chi tiết
+        df['Dự đoán'] = model.predict(X)
+st.success(f"Mô hình đã huấn luyện xong! Độ chính xác: {model.score(X_test, y_test)*100:.2f}%")
+        
+        # HIỆN CHI TIẾT
+        st.write("### 2. Danh sách các giao dịch bị hệ thống nghi ngờ gian lận:")
+        danh_sach_gian_lan = df[df['Dự đoán'] == 1]
+        
+        if not danh_sach_gian_lan.empty:
+            st.warning(f"Tìm thấy {len(danh_sach_gian_lan)} giao dịch có dấu hiệu bất thường!")
+            st.dataframe(danh_sach_gian_lan) # Hiển thị bảng chi tiết
+        else:
+            st.info("Không tìm thấy giao dịch gian lận nào trong tập dữ liệu này.")
+"""
+
+with open("app.py", "w", encoding="utf-8") as f:
+    f.write(code_web)
+
+print("Đã cập nhật file app.py! Bây giờ bạn hãy F5 lại trang Web nhé.")
